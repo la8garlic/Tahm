@@ -64,6 +64,8 @@ def package():
             bundle.write(ROOT / name, name)
         for file in sorted([*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]):
             bundle.write(file, file.relative_to(ROOT))
+        for image in sorted((ROOT / "docs/screenshots").glob("*.png")):
+            bundle.write(image, image.relative_to(ROOT))
         bundle.write(ROOT / "web/public/licenses/MiSans.pdf", "web/public/licenses/MiSans.pdf")
         bundle.write(ROOT / "web/public/licenses/MiSans.pdf", "licenses/MiSans.pdf")
         lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))

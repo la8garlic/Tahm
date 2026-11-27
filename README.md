@@ -4,6 +4,8 @@
 
 塔姆是面向 Windows x64 的桌面文件分析工具。扫描一个磁盘或文件夹，可以找出占空间的内容、了解旧目录的用途，并在移入回收站前估算实际能释放的空间。基础分析在本机完成，离线可用。
 
+![塔姆扫描中心，显示磁盘可用空间、常用位置和三个示例目录的扫描记录](docs/screenshots/scan-center-zh-CN.png)
+
 ## 下载与启动
 
 1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v0.8.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
