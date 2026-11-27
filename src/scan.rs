@@ -1,18 +1,18 @@
 //! 深度优先枚举目录，退栈时合并子树统计。每个目录只枚举一次。
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs::{self, ReadDir},
     io,
     os::windows::fs::MetadataExt,
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
-    time::{Duration, Instant, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 
 use crate::{
     advice::{self, Markers, KINDS},
-    allocation::{Disk, Reader},
+    allocation::{Disk, Measurement, Reader},
     catalog::{open_entry, Branch, Catalog, Member, Stamp},
     report::{display, Extension, Item, Ranking, Report, Totals},
 };
@@ -41,12 +41,11 @@ impl Frame {
         path: PathBuf,
         guarded: bool,
         within_generated: bool,
-        meta: &fs::Metadata,
+        stamp: Stamp,
     ) -> io::Result<Self> {
-        if !meta.is_dir() || meta.file_attributes() & REPARSE != 0 {
+        if stamp.attrs & (0x10 | REPARSE) != 0x10 {
             return Err(io::Error::other("目录已变化或为重解析点。"));
         }
-        let stamp = Stamp::read(meta);
         let entries = fs::read_dir(&path)?;
         let name = path
             .file_name()
@@ -127,7 +126,7 @@ struct Inventory {
     folders: Ranking,
     files: Ranking,
     reviews: Ranking,
-    review_count: u64,
+    review_types: BTreeMap<&'static str, u64>,
 }
 
 impl Inventory {
@@ -141,29 +140,25 @@ impl Inventory {
     fn file(
         &mut self,
         frame: &mut Frame,
-        entry: &fs::DirEntry,
-        meta: &fs::Metadata,
-        handle: &fs::File,
-        reader: &Reader,
+        path: &Path,
+        filename: std::ffi::OsString,
+        stamp: Stamp,
+        measured: io::Result<Measurement>,
     ) {
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
+        let name = filename.to_string_lossy();
         let ext = Path::new(name.as_ref())
             .extension()
             .and_then(|s| s.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
         let category = advice::kind(&ext);
-        let bytes = meta.len();
-        let stamp = Stamp::read(meta);
-        let disk = match reader.read(&entry.path(), handle, stamp) {
+        let bytes = stamp.file_len;
+        let disk = match measured {
             Ok(m) => m.attribute(&mut self.linked),
             Err(error) => {
                 if self.issues.len() < 20 {
-                    self.issues.push(format!(
-                        "磁盘占用未计入：{} — {error}",
-                        entry.path().display()
-                    ));
+                    self.issues
+                        .push(format!("磁盘占用未计入：{} — {error}", path.display()));
                 }
                 Disk {
                     unknown: 1,
@@ -173,36 +168,35 @@ impl Inventory {
         };
         frame.disk.add(disk);
         // 与主扫描共用一次元数据读取，零字节文件也计入扩展名数量。
-        let stats = self.extensions.entry(ext.clone()).or_default();
+        let advice = advice::file(&ext, category, frame.guarded, frame.generated);
+        frame.markers.bytecode += u64::from(ext == "pyc");
+        let stats = self.extensions.entry(ext).or_default();
         stats.0 += bytes;
         stats.1 += 1;
-        let modified = meta
-            .modified()
-            .ok()
-            .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-            .map(|time| time.as_secs());
+        let modified = stamp.modified();
         frame.markers.observe(&name.to_ascii_lowercase());
-        frame.markers.bytecode += u64::from(ext == "pyc");
         frame.types[category] += bytes;
         frame.files += 1;
         frame.modified = frame.modified.max(modified);
         frame.members.push(Member {
             disk,
-            name: entry.file_name(),
+            review: advice.review,
+            name: filename,
             bytes,
             stamp,
         });
         self.totals.files += 1;
         self.totals.bytes += bytes;
-        let advice = advice::file(&ext, category, frame.guarded, frame.generated);
-        self.review_count += u64::from(advice.review);
+        if advice.review {
+            *self.review_types.entry(advice.label).or_default() += 1;
+        }
         let in_files = self.files.worth(bytes);
         let in_reviews = advice.review && self.reviews.worth(bytes);
         if in_files || in_reviews {
             let item = Item {
                 disk,
                 bytes,
-                path: display(&entry.path()),
+                path: display(path),
                 directory: false,
                 files: 1,
                 modified,
@@ -219,8 +213,8 @@ impl Inventory {
     }
 
     fn folder(&mut self, item: &Item, depth: usize) {
-        if item.advice.review {
-            self.review_count += 1;
+        if depth > 0 && item.advice.review {
+            *self.review_types.entry(item.advice.label).or_default() += 1;
             self.reviews.offer(item.clone());
         }
         if depth == 1 {
@@ -282,7 +276,14 @@ pub fn run(
         ..Catalog::default()
     };
     let first = open_entry(root)
-        .and_then(|f| Frame::open(root.to_owned(), guarded, generated, &f.metadata()?))
+        .and_then(|f| {
+            Frame::open(
+                root.to_owned(),
+                guarded,
+                generated,
+                Stamp::read(&f.metadata()?),
+            )
+        })
         .map_err(|e| format!("{} — {e}", root.display()))?;
     let mut stack = vec![first];
     let mut inventory = Inventory::default();
@@ -326,6 +327,7 @@ pub fn run(
                 );
                 if let Some(parent) = stack.last_mut() {
                     parent.members.push(Member {
+                        review: info.advice.review,
                         disk: info.disk,
                         name: done.path.file_name().expect("子目录必须有名称").to_owned(),
                         bytes: info.bytes,
@@ -355,21 +357,31 @@ pub fn run(
                         children: inventory.children,
                         direct_file_bytes: inventory.direct_file_bytes,
                         reviews: inventory.reviews.finish(),
-                        review_count: inventory.review_count,
+                        review_count: inventory.review_types.values().sum(),
+                        review_types: inventory.review_types,
                         issues: inventory.issues,
                     },
                     catalog,
                 )));
             }
         };
-        match open_entry(&entry.path()).and_then(|f| Ok((f.metadata()?, f))) {
-            Ok((meta, _)) if meta.file_attributes() & REPARSE != 0 => {
+        let path = entry.path();
+        // 同一句柄的基本信息既用于快照，也用于核对占用和硬链接，避免逐文件重复查询。
+        match open_entry(&path).and_then(|handle| {
+            let info = winapi_util::file::information(&handle);
+            let stamp = match &info {
+                Ok(info) => Stamp::from_info(info),
+                // 部分文件系统只提供基础元数据，保留逻辑大小并单独报告未知占用。
+                Err(_) => Stamp::read(&handle.metadata()?),
+            };
+            Ok((stamp, info, handle))
+        }) {
+            Ok((stamp, _, _)) if stamp.attrs & REPARSE != 0 => {
                 inventory.totals.skipped += 1;
                 frame.incomplete = true;
             }
-            Ok((meta, _)) if meta.is_dir() => {
-                let path = entry.path();
-                match Frame::open(path, frame.guarded, frame.generated, &meta) {
+            Ok((stamp, _, _handle)) if stamp.attrs & 0x10 != 0 => {
+                match Frame::open(path, frame.guarded, frame.generated, stamp) {
                     Ok(child) => {
                         inventory.totals.folders += 1;
                         stack.push(child);
@@ -380,15 +392,12 @@ pub fn run(
                     }
                 }
             }
-            Ok((meta, handle)) if meta.is_file() => {
+            Ok((stamp, info, handle)) => {
                 if depth == 0 {
-                    inventory.direct_file_bytes += meta.len();
+                    inventory.direct_file_bytes += stamp.file_len;
                 }
-                inventory.file(frame, &entry, &meta, &handle, &reader);
-            }
-            Ok(_) => {
-                inventory.totals.skipped += 1;
-                frame.incomplete = true;
+                let measured = info.and_then(|info| reader.measure(&path, &handle, &info));
+                inventory.file(frame, &path, entry.file_name(), stamp, measured);
             }
             Err(err) => {
                 inventory.error(&entry.path(), err);

@@ -1,4 +1,13 @@
 {
+  "一键扫描清理建议": "Cleanup scan",
+  "查找可重建的目录和需要核对的文件，扫描后由你选择清理项。": "Find rebuildable folders and files to review, then choose what to clean up.",
+  "扫描范围": "Scan scope",
+  "选择扫描范围": "Choose a scan scope",
+  "扫描并查看建议": "Scan for suggestions",
+  "共发现 {0} 项建议。选中项目可查看判断依据和预计释放空间。": "{0} suggestions found. Select items to see the evidence and estimated reclaimable space.",
+  "建议类别": "Suggestion category",
+  "全部建议": "All suggestions",
+  "此范围内未发现符合清理规则的项目。": "No items in this location matched the cleanup rules.",
   "准备就绪": "Ready",
   "正在扫描…": "Scanning…",
   "扫描已取消": "Scan cancelled",

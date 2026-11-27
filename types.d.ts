@@ -21,7 +21,9 @@ interface ReclaimEstimate {
   retained_files: number;
   unknown: number;
 }
+type ReviewFilter = { query: string; category: string | null; labels: string[] };
 type SelectionOrder =
+  | { kind: "reviews"; filter: ReviewFilter }
   | { kind: "directory"; path: string; query: string; metric: SpaceMetric }
   | { kind: "files"; query: string; extension: string | null; minimum: number };
 interface Totals {
@@ -51,6 +53,7 @@ interface ScanReport {
   folders: ScanItem[];
   reviews: ScanItem[];
   review_count: number;
+  review_types: Record<string, number>;
   issues: string[];
 }
 interface FolderPage {

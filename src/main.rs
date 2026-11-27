@@ -28,6 +28,7 @@ fn main() {
             commands::volumes,
             commands::old_folders,
             commands::find_files,
+            commands::find_reviews,
             commands::selection_range,
             commands::find_copies,
             commands::cancel_copies,

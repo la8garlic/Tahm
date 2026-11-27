@@ -27,7 +27,7 @@ pub fn open_entry(path: &Path) -> io::Result<File> {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Stamp {
-    file_len: u64,
+    pub file_len: u64,
     created: u64,
     written: u64,
     pub attrs: u32,
@@ -48,11 +48,18 @@ impl Stamp {
         };
         Err(format!("{}：{change}。请重新扫描并复核。", path.display()))
     }
-    pub fn matches_file(self, info: &winapi_util::file::Information) -> bool {
-        self.file_len == info.file_size()
-            && self.attrs as u64 == info.file_attributes()
-            && self.created == info.creation_time().unwrap_or(0)
-            && self.written == info.last_write_time().unwrap_or(0)
+    pub fn from_info(info: &winapi_util::file::Information) -> Self {
+        let attrs = info.file_attributes() as u32;
+        Self {
+            file_len: if attrs & 0x10 == 0 {
+                info.file_size()
+            } else {
+                0
+            },
+            attrs,
+            created: info.creation_time().unwrap_or(0),
+            written: info.last_write_time().unwrap_or(0),
+        }
     }
     pub fn read(m: &Metadata) -> Self {
         Self {
@@ -64,7 +71,7 @@ impl Stamp {
             attrs: m.file_attributes(),
         }
     }
-    fn modified(self) -> Option<u64> {
+    pub fn modified(self) -> Option<u64> {
         // FILETIME 从 1601 年起，以 100 纳秒为单位。
         (self.written / 10_000_000).checked_sub(11_644_473_600)
     }
@@ -75,6 +82,7 @@ pub struct Member {
     pub name: OsString,
     pub stamp: Stamp,
     pub bytes: u64,
+    pub review: bool,
 }
 impl Member {
     fn named(&self, query: &str) -> bool {
@@ -179,8 +187,19 @@ pub struct FileCursor {
 }
 
 #[derive(serde::Deserialize)]
+pub struct ReviewFilter {
+    query: String,
+    category: Option<String>,
+    // 前端把当前语言中匹配搜索词的分类还原为规则标识。
+    labels: Vec<String>,
+}
+
+#[derive(serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum SelectionOrder {
+    Reviews {
+        filter: ReviewFilter,
+    },
     Directory {
         path: PathBuf,
         query: String,
@@ -194,6 +213,43 @@ pub enum SelectionOrder {
 }
 
 impl Catalog {
+    fn matching_reviews<'a>(&'a self, filter: &'a ReviewFilter) -> impl Iterator<Item = Item> + 'a {
+        let query = filter.query.to_lowercase();
+        self.branches
+            .iter()
+            .flat_map(move |(dir, branch)| {
+                branch
+                    .members
+                    .iter()
+                    .filter(|m| m.review)
+                    .map(move |m| self.item(dir, m, branch))
+            })
+            .filter(move |item| {
+                filter
+                    .category
+                    .as_deref()
+                    .is_none_or(|label| label == item.advice.label)
+                    && (query.is_empty()
+                        || filter.labels.iter().any(|label| label == item.advice.label)
+                        || item.path.to_lowercase().contains(&query))
+            })
+    }
+
+    pub fn find_reviews(
+        &self,
+        filter: &ReviewFilter,
+        after: Option<&FileCursor>,
+    ) -> (usize, Vec<Item>) {
+        let mut matches = 0;
+        let mut largest = Ranking::default();
+        for item in self.matching_reviews(filter) {
+            matches += 1;
+            if after.is_none_or(|cursor| (item.bytes, &item.path) < (cursor.bytes, &cursor.path)) {
+                largest.offer(item);
+            }
+        }
+        (matches, largest.finish())
+    }
     /// 按大小和完整路径降序续页，相同大小的文件也有确定位置，每页只保留一百项。
     pub fn find_files(
         &self,
@@ -235,6 +291,17 @@ impl Catalog {
     ) -> Result<Vec<Item>, String> {
         let mut rows = Vec::new();
         match order {
+            SelectionOrder::Reviews { filter } => {
+                let a = (self.member(start)?.bytes, display(start));
+                let b = (self.member(end)?.bytes, display(end));
+                let (low, high) = if a <= b { (a, b) } else { (b, a) };
+                rows.extend(self.matching_reviews(&filter).filter(|item| {
+                    (item.bytes, &item.path) >= (low.0, &low.1)
+                        && (item.bytes, &item.path) <= (high.0, &high.1)
+                }));
+                rows.sort_unstable_by(|a, b| b.cmp(a));
+                Ok(rows)
+            }
             SelectionOrder::Directory {
                 path,
                 query,

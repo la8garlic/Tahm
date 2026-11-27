@@ -78,6 +78,7 @@ pub struct Report {
     pub files: Vec<Item>,
     pub reviews: Vec<Item>,
     pub review_count: u64,
+    pub review_types: std::collections::BTreeMap<&'static str, u64>,
     pub issues: Vec<String>,
 }
 

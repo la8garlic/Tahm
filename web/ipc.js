@@ -58,6 +58,9 @@ export const oldFolders = (generation, before, minimum, query) =>
 export const findFiles = (generation, query, extension, minimum, after) =>
   invoke("find_files", { generation, query, extension, minimum, after });
 
+/** 按规则和搜索词在整个快照中续页。 @param {number} generation @param {ReviewFilter} filter @param {{bytes:number,path:string}|null} after @returns {Promise<[number, ScanItem[]]>} */
+export const findReviews = (generation, filter, after) => invoke("find_reviews", { generation, filter, after });
+
 /** 仅在手动确认后从磁盘读取同尺寸文件进行逐字节比对。
  * @param {number} generation @param {string} path @param {(p:CopyProgress)=>void} onProgress @returns {Promise<CopyReport>} */
 export const findCopies = (generation, path, onProgress) =>
