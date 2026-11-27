@@ -33,7 +33,7 @@ export function TitleBar() {
   return (
     <header className="window-bar" aria-label={windowTitle()}>
       <div className="window-caption" data-tauri-drag-region="deep">
-        <img src="./tahm.svg" alt="" draggable={false} width={25} height={25} />
+        <img src="./tahm.png" alt="" draggable={false} width={25} height={25} />
         <b>{brand}</b>
         <span>{description}</span>
         <small className="app-version">v{version}</small>
