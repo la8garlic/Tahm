@@ -1,6 +1,6 @@
 [package]
 name = "tahm"
-version = "0.9.0"
+version = "1.0.0"
 edition = "2021"
 description = "塔姆 · 磁盘空间分析"
 license = "Apache-2.0"

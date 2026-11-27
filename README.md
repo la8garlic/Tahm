@@ -1,6 +1,6 @@
 # 塔姆 · 磁盘空间分析
 
-[English](README.en.md) · [下载最新版](https://github.com/la8garlic/Tahm/releases/latest) · [安全报告](SECURITY.md)
+[English](README.en.md) · [下载最新版](https://github.com/la8garlic/Tahm/releases/latest) · [v1.0.0 发布说明](docs/releases/v1.0.0.zh-CN.md) · [安全报告](SECURITY.md)
 
 塔姆是面向 Windows x64 的桌面文件分析工具。扫描一个磁盘或文件夹，可以找出占空间的内容、了解旧目录的用途，并在移入回收站前估算实际能释放的空间。基础分析在本机完成，离线可用。
 
@@ -8,8 +8,8 @@
 
 ## 下载与启动
 
-1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v0.9.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
-2. 在下载目录运行 `Get-FileHash .\Tahm-v0.9.0-windows-x64.zip -Algorithm SHA256`，与校验文件中的十六进制值逐字比较。
+1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v1.0.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
+2. 在下载目录运行 `Get-FileHash .\Tahm-v1.0.0-windows-x64.zip -Algorithm SHA256`，与校验文件中的十六进制值逐字比较。
 3. 解压整个 ZIP，双击 `Tahm.exe`。系统需要 Microsoft Edge WebView2 Runtime；缺少时可从 [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/) 安装。当前公开发行版没有 Authenticode 签名。
 4. 在标题栏选择 **English** 或 **中文**。应用会记住选择。也可运行 `.\Tahm.exe "D:\示例目录"` 直接扫描指定目录。
 
