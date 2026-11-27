@@ -4,6 +4,8 @@
 
 Tahm is a Windows x64 desktop application for understanding disk usage. Scan a drive or folder, inspect forgotten directories and estimate how much space a selection could free before sending it to the Recycle Bin. The core analysis runs locally and works offline.
 
+![Tahm Scan center showing free disk space, common locations and three recently scanned sample folders](docs/screenshots/scan-center-en.png)
+
 ## Install and run
 
 1. Download the portable ZIP and `SHA256SUMS.txt` from the same [release](https://github.com/la8garlic/Tahm/releases).
