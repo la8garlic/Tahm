@@ -4,6 +4,13 @@ import { X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 export { bytes, basename } from "./ui.js";
 
+export const reviewLevelName = (level: ReviewLevel) =>
+  level === "rebuild" ? tr("有重建依据") : tr("需人工判断");
+
+export function adviceLabel(advice: Advice) {
+  return advice.review ? reviewLevelName(advice.review) + " · " + label(advice.label) : label(advice.label);
+}
+
 export function emptyReviewReason(report: ScanReport) {
   return tr(
     "没有可建议清理的子项目。{0}",

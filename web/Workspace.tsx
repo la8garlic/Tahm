@@ -24,6 +24,7 @@ import {
   count,
   date,
   emptyReviewReason,
+  reviewLevelName,
   parent,
   percent,
   useData,
@@ -247,23 +248,29 @@ function SearchList({
   report,
   extension,
   setExt,
+  level,
+  setLevel,
   ...props
 }: Omit<RowProps, "rows" | "empty" | "base" | "paths" | "scope" | "order"> & {
   view: "files" | "folders" | "reviews" | "old";
   report: ScanReport;
   extension: string | null;
   setExt: (name: string | null) => void;
+  level: ReviewLevel;
+  setLevel: (level: ReviewLevel) => void;
 }) {
   const [category, setCategory] = useState<string | null>(null);
   const [query, setQuery] = useState(""),
     [minimum, setMinimum] = useState(0),
     [age, setAge] = useState(365);
   const term = query.trim().toLowerCase();
+  const group = report.reviews[level];
   const reviewFilter = {
+    level,
     query: query.trim(),
     category,
     labels: term
-      ? Object.keys(report.review_types).filter((key) => label(key).toLowerCase().includes(term))
+      ? Object.keys(group.categories).filter((key) => label(key).toLowerCase().includes(term))
       : [],
   };
   const filterKey = JSON.stringify([
@@ -271,6 +278,7 @@ function SearchList({
     view,
     query,
     category,
+    level,
     extension,
     minimum,
     age,
@@ -302,7 +310,7 @@ function SearchList({
           query.trim(),
         );
       if (view === "reviews") {
-        if (!term && !category && !cursors.length) return [report.review_count, report.reviews];
+        if (!term && !category && !cursors.length) return [group.count, group.items];
         return ipc.findReviews(report.generation, reviewFilter, cursors.at(-1) ?? null);
       }
       const rows = report[view].filter(
@@ -324,12 +332,27 @@ function SearchList({
         </h2>
       </div>
       {view === "reviews" && (
-        <p className="review-intro">
-          {tr(
-            "共发现 {0} 项建议。请先核对清理条件，勾选后可查看预计释放空间。",
-            count(report.review_count),
-          )}
-        </p>
+        <div className="review-levels">
+          <div className="space-switch" role="group" aria-label={tr("判断依据")}>
+            {(["rebuild", "manual"] as const).map((key) => (
+              <button
+                key={key}
+                aria-pressed={level === key}
+                onClick={() => {
+                  setCategory(null);
+                  setLevel(key);
+                }}
+              >
+                {reviewLevelName(key)} ({count(report.reviews[key].count)})
+              </button>
+            ))}
+          </div>
+          <p className="review-intro">
+            {level === "rebuild"
+              ? tr("扫描找到了项目清单、锁文件或对应源码等重建线索。请逐项核对下方条件。")
+              : tr("这些项目仍可能有用。请先确认任务状态、备份或重新取得文件的方式。")}
+          </p>
+        </div>
       )}
       <div className="filters">
         <label className="search">
@@ -349,8 +372,8 @@ function SearchList({
             value={category ?? ""}
             onChange={(e) => setCategory(e.target.value || null)}
           >
-            <option value="">{tr("全部建议")}</option>
-            {Object.entries(report.review_types).map(([key, total]) => (
+            <option value="">{tr("全部类别")}</option>
+            {Object.entries(group.categories).map(([key, total]) => (
               <option value={key} key={key}>
                 {label(key)} ({count(total)})
               </option>
@@ -402,9 +425,11 @@ function SearchList({
         empty={
           lookup?.error ??
           (result
-            ? view === "reviews" && !report.review_count
+            ? view === "reviews" && !report.reviews.rebuild.count && !report.reviews.manual.count
               ? emptyReviewReason(report)
-              : tr("没有匹配的项目")
+              : view === "reviews" && !group.count
+                ? tr("本次扫描没有此类项目")
+                : tr("没有匹配的项目")
             : tr("正在查找…"))
         }
       />
@@ -470,6 +495,9 @@ export function Workspace({
   const work = useRef<HTMLDivElement>(null);
   const [extension, setExt] = useState<string | null>(null),
     [mapFirst, setMapFirst] = useState(true);
+  const [reviewLevel, setReviewLevel] = useState<ReviewLevel>(
+    report.reviews.rebuild.count || !report.reviews.manual.count ? "rebuild" : "manual",
+  );
   // 解读按快照和完整路径复用，切换分析页后仍可查看。
   const [readings, setReadings] = useState<Record<string, Reading>>({});
   const [fullMap, setFullMap] = useState(false);
@@ -586,7 +614,7 @@ export function Workspace({
       ? page?.rows.find((i) => i.path === initialFocus && basename(i.path) === loc.focus)
       : undefined;
   const item = selected ?? located ?? page?.folder ?? report.root_info;
-  const showInspector = view !== "reviews" || selected?.advice.review;
+  const showInspector = view !== "reviews" || selected?.advice.review === reviewLevel;
   const readingKey = JSON.stringify([item.path, locale()]);
   function locate(item: ScanItem) {
     setFullMap(false);
@@ -793,6 +821,8 @@ export function Workspace({
             </>
           ) : (
             <SearchList
+                level={reviewLevel}
+                setLevel={setReviewLevel}
               selection={selection}
               key={view}
               view={view}

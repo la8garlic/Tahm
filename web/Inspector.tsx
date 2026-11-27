@@ -11,7 +11,7 @@ import {
   Bookmark,
   ChevronRight,
 } from "lucide-react";
-import { bytes, basename, date, parent, count, Dialog, useData } from "./shared";
+import { adviceLabel, bytes, basename, date, parent, count, Dialog, useData } from "./shared";
 import * as ipc from "./ipc.js";
 import { Copies } from "./Copies";
 
@@ -65,7 +65,7 @@ function Model({
       label(item.kind),
     ),
     tr("最近文件修改 · {0}", date(item.modified)),
-    tr("本地规则 · {0}。{1}", label(item.advice.label), label(item.advice.reason)),
+    tr("本地规则 · {0}。{1}", adviceLabel(item.advice), label(item.advice.reason)),
     tr(
       "未检查其他副本、备份或程序使用情况。全次扫描跳过 {0} 项，读取错误 {1} 处。未读取文件正文。",
       report.totals.skipped,
@@ -241,7 +241,7 @@ export function Inspector({
       <div className="evidence">
         <b>
           <ShieldCheck />
-          {tr("判断依据")} · {label(item.advice.label)}
+          {tr("判断依据")} · {adviceLabel(item.advice)}
         </b>
         <p>{label(item.advice.reason)}</p>
       </div>

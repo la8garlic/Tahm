@@ -429,7 +429,8 @@ footer svg {
 .quick-scan label span { display: block; margin-bottom: 3px; }
 .quick-scan select { width: 100%; }
 .quick-scan button { align-self: flex-end; }
-.review-intro { margin: 8px 0; color: var(--muted); }
+.review-levels { padding: 0 16px; }
+.review-intro { margin: 8px 0 12px; color: var(--muted); }
 .scan-advice {
   display: flex;
   align-items: center;
