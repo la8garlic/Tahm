@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { tr, label, locale } from "./i18n";
 import {
   ArrowRight,
@@ -5,6 +6,7 @@ import {
   Download,
   FolderOpen,
   HardDrive,
+  ListChecks,
   Monitor,
   UserRound,
 } from "lucide-react";
@@ -14,11 +16,15 @@ import type { Snapshot } from "./history";
 
 export function Home({
   scan,
+  scanForCleanup,
+  address,
   choose,
   history,
   clear,
 }: {
   scan: (s: string) => void;
+  scanForCleanup: (path: string) => void;
+  address: string;
   choose: () => void;
   history: Snapshot[];
   clear: () => void;
@@ -26,6 +32,14 @@ export function Home({
   const volumes = useData("volumes", ipc.volumes),
     locations = useData("places", ipc.locations);
   const disks = volumes?.value;
+  const [choice, setChoice] = useState("");
+  const current = address.trim().replace(/^"(.*)"$/, "$1");
+  const scopes = new Map<string, string>();
+  if (current) scopes.set(current, current);
+  for (const [name, path] of locations?.value ?? []) scopes.set(path, label(name) + " · " + path);
+  for (const disk of disks ?? []) scopes.set(disk.path, disk.path);
+  // 等待系统返回常用位置；磁盘列表先到达时也不能把默认范围扩大为整盘。
+  const target = scopes.has(choice) ? choice : current || locations?.value?.[0]?.[1];
   return (
     <div className="home">
       <header className="home-heading">
@@ -38,6 +52,34 @@ export function Home({
           {tr("选择文件夹")}
         </button>
       </header>
+      <section className="card quick-scan">
+        <div>
+          <h2>
+            <ListChecks />
+            {tr("一键扫描清理建议")}
+          </h2>
+          <p>{tr("查找可重建的目录和需要核对的文件，扫描后由你选择清理项。")}</p>
+        </div>
+        <label>
+          <span>{tr("扫描范围")}</span>
+          <select value={target ?? ""} onChange={(e) => setChoice(e.target.value)}>
+            {!target && <option value="">{tr("选择扫描范围")}</option>}
+            {[...scopes].map(([path, name]) => (
+              <option key={path} value={path}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="primary"
+          disabled={!target}
+          onClick={() => target && scanForCleanup(target)}
+        >
+          <ListChecks />
+          {tr("扫描并查看建议")}
+        </button>
+      </section>
       <div className="section-title">
         <h2>{tr("磁盘与卷")}</h2>
         <small>{disks ? tr("{0} 个位置", count(disks.length)) : tr("正在读取")}</small>

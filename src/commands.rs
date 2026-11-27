@@ -159,6 +159,24 @@ pub async fn find_files(
     .map_err(|e| e.to_string())
 }
 
+/// 在整个快照中筛选建议，仅返回当前页。
+#[tauri::command]
+pub async fn find_reviews(
+    generation: u64,
+    filter: crate::catalog::ReviewFilter,
+    after: Option<crate::catalog::FileCursor>,
+    session: State<'_, Session>,
+) -> Result<(usize, Vec<crate::report::Item>), String> {
+    let catalog = session
+        .0
+        .lock()
+        .expect("扫描状态锁已损坏")
+        .snapshot(generation)?;
+    tauri::async_runtime::spawn_blocking(move || catalog.find_reviews(&filter, after.as_ref()))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// 沿当前筛选与排序读取跨页选择范围。
 #[tauri::command]
 pub async fn selection_range(

@@ -84,13 +84,17 @@ impl Reader {
             .map_err(io::Error::other)
     }
 
-    pub fn read(&self, path: &Path, handle: &File, expected: Stamp) -> io::Result<Measurement> {
-        let info = winapi_util::file::information(handle)?;
-        if !expected.matches_file(&info) || info.number_of_links() == 0 {
+    pub fn measure(
+        &self,
+        path: &Path,
+        handle: &File,
+        info: &winapi_util::file::Information,
+    ) -> io::Result<Measurement> {
+        if info.number_of_links() == 0 {
             return Err(io::Error::other("文件属性已变化或链接数不可用"));
         }
         // 普通文件读取实际分配长度，避免按逻辑长度或簇大小推算驻留数据和预分配空间。
-        let bytes = if expected.attrs & (0x0200 | 0x0800) != 0 {
+        let bytes = if info.file_attributes() & (0x0200 | 0x0800) != 0 {
             filesize::file_real_size(path)?
         } else {
             fs2::FileExt::allocated_size(handle)?
@@ -147,9 +151,13 @@ pub fn estimate(
     let mut shared = HashMap::<FileId, LinkGroup>::new();
     let mut folders = Vec::new();
     let reader = Reader::new(&catalog.root);
-    let mut measure = |path: &Path, stamp| match open_entry(path)
-        .and_then(|handle| reader.read(path, &handle, stamp))
-    {
+    let mut measure = |path: &Path, stamp| match open_entry(path).and_then(|handle| {
+        let info = winapi_util::file::information(&handle)?;
+        if Stamp::from_info(&info) != stamp {
+            return Err(io::Error::other("文件属性已变化"));
+        }
+        reader.measure(path, &handle, &info)
+    }) {
         Ok(Measurement {
             bytes,
             shared_id: None,

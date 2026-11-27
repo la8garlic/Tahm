@@ -62,7 +62,10 @@ export function App() {
   const [kept, setKept] = useState<string[]>([]),
     keptRef = useRef<string[]>([]);
   const [panel, setPanel] = useState<"queue" | "rescan" | "history" | null>(null);
-  const [planned, setPlanned] = useState(""),
+  const [planned, setPlanned] = useState({
+      path: "",
+      screen: "children" as "children" | "reviews",
+    }),
     [recycling, setRecycling] = useState(false);
   const [outcomes, setOutcomes] = useState<RecycleResult[]>([]),
     [message, setMessage] = useNotice();
@@ -91,9 +94,17 @@ export function App() {
   }
   async function scan(
     input: string,
-    after = false,
-    focus: string | null = null,
-    expected = report?.root === input ? report.totals.files : 0,
+    {
+      after = false,
+      focus = null,
+      expected = report?.root === input ? report.totals.files : 0,
+      screen = "children",
+    }: {
+      after?: boolean;
+      focus?: string | null;
+      expected?: number;
+      screen?: "children" | "reviews";
+    } = {},
   ) {
     if (operating.current || pendingRecycle.current) return;
     operating.current = true;
@@ -119,7 +130,7 @@ export function App() {
       setReport(data);
       setInitialFocus(focus);
       setPath(data.root);
-      go("children");
+      go(screen);
       notify(() =>
         tr(
           "扫描完成 · {0} 个文件 · {1} 秒",
@@ -139,11 +150,11 @@ export function App() {
       setProgress(null);
     }
   }
-  function request(input: string) {
+  function request(input: string, screen: "children" | "reviews" = "children") {
     if (queueRef.current.length) {
-      setPlanned(input);
+      setPlanned({ path: input, screen });
       setPanel("rescan");
-    } else run(() => scan(input));
+    } else run(() => scan(input, { screen }));
   }
   async function choose() {
     const p = await ipc.chooseFolder();
@@ -271,7 +282,11 @@ export function App() {
         pendingRecycle.current = false;
         const moved = new Set(result.filter((r) => r.error === null).map((r) => r.path));
         const removedFiles = submitted.reduce((n, i) => n + (moved.has(i.path) ? i.files : 0), 0);
-        await scan(root, true, null, report.totals.files - removedFiles);
+        await scan(root, {
+          after: true,
+          expected: report.totals.files - removedFiles,
+          screen: view === "reviews" ? "reviews" : "children",
+        });
       }
     } catch (e) {
       setMessage(() => nativeMessage(String(e)));
@@ -400,6 +415,8 @@ export function App() {
         <div className="scrollbody" inert={busy || recycling}>
           {home && (
             <Home
+              address={path}
+              scanForCleanup={(target) => request(target, "reviews")}
               history={history}
               clear={() => setPanel("history")}
               scan={request}
@@ -419,7 +436,7 @@ export function App() {
                   <button
                     title={tr("重新扫描")}
                     aria-label={tr("重新扫描")}
-                    onClick={() => request(report.root)}
+                    onClick={() => request(report.root, view === "reviews" ? "reviews" : "children")}
                   >
                     <RotateCw />
                   </button>
@@ -513,7 +530,7 @@ export function App() {
           expectedFiles={expectedFiles}
           review={(failed) => {
             setPanel(null);
-            run(() => scan(report?.root ?? parent(failed), true, failed));
+            run(() => scan(report?.root ?? parent(failed), { after: true, focus: failed }));
           }}
           outcomes={outcomes}
           message={message}
@@ -526,14 +543,14 @@ export function App() {
       {panel === "rescan" && (
         <Dialog title={tr("重新扫描此位置？")} close={() => setPanel(null)}>
           <p>{tr("新扫描完成后，当前清单中的 {0} 项将移出待清理清单。", queue.length)}</p>
-          <p className="path">{planned}</p>
+          <p className="path">{planned.path}</p>
           <div className="dialog-actions">
             <button onClick={() => setPanel(null)}>{tr("取消")}</button>
             <button
               className="primary"
               onClick={() => {
                 setPanel(null);
-                run(() => scan(planned));
+                run(() => scan(planned.path, { screen: planned.screen }));
               }}
             >
               {tr("开始扫描")}

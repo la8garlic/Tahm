@@ -58,6 +58,7 @@ function location(path: string, focus: string | null = null) {
 }
 type Reveal = { path: string; target: "rows" | "map"; keepViewport: boolean; directory: boolean };
 type RowProps = {
+  showAdvice?: boolean;
   selection: Selection;
   scope: string;
   order?: SelectionOrder;
@@ -72,6 +73,7 @@ type RowProps = {
   empty: string;
 };
 function Items({
+  showAdvice = false,
   selection,
   scope,
   order,
@@ -174,6 +176,11 @@ function Items({
                         {basename(item.path)}
                       </button>
                       {paths && <small title={item.path}>{parent(item.path)}</small>}
+                      {showAdvice && (
+                        <small className="review-rule" title={label(item.advice.reason)}>
+                          {label(item.advice.label)}
+                        </small>
+                      )}
                     </div>
                     {badge && <em>{label(badge)}</em>}
                     {!selection.paths.has(item.path) &&
@@ -236,13 +243,23 @@ function SearchList({
   extension: string | null;
   setExt: (name: string | null) => void;
 }) {
+  const [category, setCategory] = useState<string | null>(null);
   const [query, setQuery] = useState(""),
     [minimum, setMinimum] = useState(0),
     [age, setAge] = useState(365);
+  const term = query.trim().toLowerCase();
+  const reviewFilter = {
+    query: query.trim(),
+    category,
+    labels: term
+      ? Object.keys(report.review_types).filter((key) => label(key).toLowerCase().includes(term))
+      : [],
+  };
   const filterKey = JSON.stringify([
     report.generation,
     view,
     query,
+    category,
     extension,
     minimum,
     age,
@@ -273,6 +290,10 @@ function SearchList({
           minimum,
           query.trim(),
         );
+      if (view === "reviews") {
+        if (!term && !category && !cursors.length) return [report.review_count, report.reviews];
+        return ipc.findReviews(report.generation, reviewFilter, cursors.at(-1) ?? null);
+      }
       const rows = report[view].filter(
         (i) =>
           i.path.toLowerCase().includes(query.trim().toLowerCase()) ||
@@ -291,6 +312,14 @@ function SearchList({
           {label(titles[view])}
         </h2>
       </div>
+      {view === "reviews" && (
+        <p className="review-intro">
+          {tr(
+            "共发现 {0} 项建议。选中项目可查看判断依据和预计释放空间。",
+            count(report.review_count),
+          )}
+        </p>
+      )}
       <div className="filters">
         <label className="search">
           <Search />
@@ -303,6 +332,20 @@ function SearchList({
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
+        {view === "reviews" && (
+          <select
+            aria-label={tr("建议类别")}
+            value={category ?? ""}
+            onChange={(e) => setCategory(e.target.value || null)}
+          >
+            <option value="">{tr("全部建议")}</option>
+            {Object.entries(report.review_types).map(([key, total]) => (
+              <option value={key} key={key}>
+                {label(key)} ({count(total)})
+              </option>
+            ))}
+          </select>
+        )}
         {(view === "files" || view === "old") && (
           <select
             aria-label={tr("大小下限")}
@@ -335,27 +378,39 @@ function SearchList({
         {...props}
         scope={filterKey}
         order={
-          view === "files" ? { kind: "files", query: query.trim(), extension, minimum } : undefined
+          view === "files"
+            ? { kind: "files", query: query.trim(), extension, minimum }
+            : view === "reviews"
+              ? { kind: "reviews", filter: reviewFilter }
+              : undefined
         }
         paths
+        showAdvice={view === "reviews"}
         rows={result?.[1] ?? []}
         base={report.totals.bytes}
-        empty={lookup?.error ?? (result ? tr("没有匹配的项目") : tr("正在查找…"))}
+        empty={
+          lookup?.error ??
+          (result
+            ? view === "reviews" && !report.review_count
+              ? tr("此范围内未发现符合清理规则的项目。")
+              : tr("没有匹配的项目")
+            : tr("正在查找…"))
+        }
       />
-      {view === "files" && result ? (
+      {(view === "files" || view === "reviews") && result ? (
         <div className="pager">
           <small>
             {tr("全扫描范围匹配 {0} 项 · 第 {1} 页", count(result[0]), cursors.length + 1)}
           </small>
           <button
-            aria-label={tr("上一页文件")}
+            aria-label={view === "reviews" ? tr("上一页") : tr("上一页文件")}
             disabled={!cursors.length}
             onClick={() => setPages({ key: filterKey, cursors: cursors.slice(0, -1) })}
           >
             <ChevronLeft />
           </button>
           <button
-            aria-label={tr("下一页文件")}
+            aria-label={view === "reviews" ? tr("下一页") : tr("下一页文件")}
             disabled={(cursors.length + 1) * 100 >= result[0]}
             onClick={() => {
               const { bytes, path } = result[1].at(-1)!;
@@ -367,7 +422,7 @@ function SearchList({
         </div>
       ) : (
         <div className="list-note">
-          {view === "folders" || view === "reviews"
+          {view === "folders"
             ? tr("按大小列出前 100 项 · 当前显示 {0} 项", count(result?.[1].length ?? 0))
             : result
               ? tr(
