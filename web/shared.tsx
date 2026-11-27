@@ -1,8 +1,17 @@
-import { tr, locale, nativeMessage } from "./i18n";
+import { label, tr, locale, nativeMessage } from "./i18n";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { TitleBar } from "./TitleBar";
 export { bytes, basename } from "./ui.js";
+
+export function emptyReviewReason(report: ScanReport) {
+  return tr(
+    "没有可建议清理的子项目。{0}",
+    report.root_info.advice.review
+      ? tr("要复核扫描起点本身，请扫描它的上一级目录。")
+      : label(report.root_info.advice.reason),
+  );
+}
 
 // 面积图、图例和类型排行共用分类色，色块上的白字也要清晰可读。
 export const colors = [

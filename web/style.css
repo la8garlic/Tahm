@@ -212,6 +212,8 @@ li {
   font-size: 15px;
   color: #143c37;
 }
+.window-caption img { flex: 0 0 25px; object-fit: contain; }
+.app-version { font-size: 11px; color: var(--muted); }
 .window-caption span {
   border-inline-start: 1px solid #b5c9c2;
   padding-inline-start: 10px;
@@ -428,7 +430,21 @@ footer svg {
 .quick-scan select { width: 100%; }
 .quick-scan button { align-self: flex-end; }
 .review-intro { margin: 8px 0; color: var(--muted); }
-.file-cell .review-rule { color: var(--jade); }
+.scan-advice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-inline-start: 3px solid var(--jade);
+}
+.scan-advice > div { flex: 1 1 220px; min-width: 0; }
+.scan-advice h2 { display: flex; align-items: center; gap: 8px; }
+.scan-advice h2 svg { color: var(--jade); }
+.scan-advice p, .queue-advice { margin-top: 4px; overflow-wrap: anywhere; line-height: 1.55; }
+.queue-advice { color: var(--muted); font-size: 12px; }
 .font-credit {
   display: block;
   margin-top: 16px;
@@ -632,7 +648,7 @@ footer svg {
 }
 .metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -680,9 +696,6 @@ footer svg {
 .physical strong,
 .physical svg {
   color: #0a6357;
-}
-.violet svg {
-  color: #7d5896;
 }
 .workspace-grid {
   display: grid;
@@ -1154,6 +1167,18 @@ td:first-child {
 .items td small {
   font-size: 10px;
 }
+.items.review-items th:first-child { width: 37%; }
+.items.review-items th:nth-child(2) { width: 18%; }
+.items.review-items th:last-child,
+.items.review-items td.review-evidence {
+  display: table-cell;
+  width: 45%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.review-evidence strong { color: var(--jade); font-size: 12px; }
+.review-evidence p { margin-top: 3px; line-height: 1.55; }
 .pager,
 .list-note {
   padding: 8px 13px;

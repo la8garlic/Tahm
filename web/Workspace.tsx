@@ -23,6 +23,7 @@ import {
   color,
   count,
   date,
+  emptyReviewReason,
   parent,
   percent,
   useData,
@@ -92,7 +93,7 @@ function Items({
   return (
     <div className="table-scroll">
       <table
-        className="items"
+        className={showAdvice ? "items review-items" : "items"}
         onKeyDown={(e) => {
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
             e.preventDefault();
@@ -122,8 +123,14 @@ function Items({
               </label>
             </th>
             <th>{metric === "logical" ? tr("逻辑大小") : tr("磁盘占用")} ↓</th>
-            <th>{tr("占比")}</th>
-            <th>{tr("修改日期")}</th>
+            {showAdvice ? (
+              <th>{tr("清理依据与条件")}</th>
+            ) : (
+              <>
+                <th>{tr("占比")}</th>
+                <th>{tr("修改日期")}</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -176,11 +183,6 @@ function Items({
                         {basename(item.path)}
                       </button>
                       {paths && <small title={item.path}>{parent(item.path)}</small>}
-                      {showAdvice && (
-                        <small className="review-rule" title={label(item.advice.reason)}>
-                          {label(item.advice.label)}
-                        </small>
-                      )}
                     </div>
                     {badge && <em>{label(badge)}</em>}
                     {!selection.paths.has(item.path) &&
@@ -207,13 +209,22 @@ function Items({
                       : tr("未知")
                     : bytes(size)}
                 </td>
-                <td>
-                  <div className="share">
-                    <i style={{ width: pct + "%", background: color(item.kind) }} />
-                  </div>
-                  <small>{pct > 0 && pct < 0.1 ? "<0.1" : pct.toFixed(1)}%</small>
-                </td>
-                <td>{date(item.modified)}</td>
+                {showAdvice ? (
+                  <td className="review-evidence">
+                    <strong>{label(item.advice.label)}</strong>
+                    <p>{label(item.advice.reason)}</p>
+                  </td>
+                ) : (
+                  <>
+                    <td>
+                      <div className="share">
+                        <i style={{ width: pct + "%", background: color(item.kind) }} />
+                      </div>
+                      <small>{pct > 0 && pct < 0.1 ? "<0.1" : pct.toFixed(1)}%</small>
+                    </td>
+                    <td>{date(item.modified)}</td>
+                  </>
+                )}
               </tr>
             );
           })}
@@ -315,7 +326,7 @@ function SearchList({
       {view === "reviews" && (
         <p className="review-intro">
           {tr(
-            "共发现 {0} 项建议。选中项目可查看判断依据和预计释放空间。",
+            "共发现 {0} 项建议。请先核对清理条件，勾选后可查看预计释放空间。",
             count(report.review_count),
           )}
         </p>
@@ -392,7 +403,7 @@ function SearchList({
           lookup?.error ??
           (result
             ? view === "reviews" && !report.review_count
-              ? tr("此范围内未发现符合清理规则的项目。")
+              ? emptyReviewReason(report)
               : tr("没有匹配的项目")
             : tr("正在查找…"))
         }
@@ -575,6 +586,7 @@ export function Workspace({
       ? page?.rows.find((i) => i.path === initialFocus && basename(i.path) === loc.focus)
       : undefined;
   const item = selected ?? located ?? page?.folder ?? report.root_info;
+  const showInspector = view !== "reviews" || selected?.advice.review;
   const readingKey = JSON.stringify([item.path, locale()]);
   function locate(item: ScanItem) {
     setFullMap(false);
@@ -733,7 +745,7 @@ export function Workspace({
   return (
     <>
       {!fullMap && bar}
-      <div className="workspace-grid">
+      <div className={showInspector ? "workspace-grid" : "work"}>
         <div className="work" ref={work}>
           {view === "children" ? (
             <>
@@ -796,19 +808,21 @@ export function Workspace({
             />
           )}
         </div>
-        <Inspector
-          item={item}
-          report={report}
-          reading={readings[readingKey]}
-          save={(r) => setReadings((prev) => ({ ...prev, [readingKey]: r }))}
-          state={state(item.path)}
-          stage={selection.items.length ? undefined : () => run(() => stage([item]))}
-          keep={() => keep(item.path)}
-          enter={() => enter(item.path)}
-          locate={() => locate(item)}
-          locateCopy={locate}
-          run={run}
-        />
+        {showInspector && (
+          <Inspector
+            item={item}
+            report={report}
+            reading={readings[readingKey]}
+            save={(r) => setReadings((prev) => ({ ...prev, [readingKey]: r }))}
+            state={state(item.path)}
+            stage={selection.items.length ? undefined : () => run(() => stage([item]))}
+            keep={() => keep(item.path)}
+            enter={() => enter(item.path)}
+            locate={() => locate(item)}
+            locateCopy={locate}
+            run={run}
+          />
+        )}
       </div>
       <details className="scope">
         <summary>

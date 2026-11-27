@@ -31,17 +31,17 @@ import { Workspace, titles, type Screen } from "./Workspace";
 import { Queue } from "./Queue";
 import { contains, covering, rootsOf } from "./selection";
 import { clearHistory, readHistory, record, type Snapshot } from "./history";
-import { basename, bytes, count, Dialog, parent, ScanBar } from "./shared";
+import { basename, bytes, count, Dialog, emptyReviewReason, parent, ScanBar } from "./shared";
 import * as ipc from "./ipc.js";
 
 const navigation = [
   ["children", Layers3],
+  ["reviews", ListChecks],
   ["types", PieChart],
   ["files", FileSearch],
   ["folders", Boxes],
   ["old", Clock3],
   ["compare", History],
-  ["reviews", ListChecks],
 ] as const;
 export function App() {
   const [report, setReport] = useState<ScanReport | null>(null),
@@ -297,6 +297,7 @@ export function App() {
       setRecycleProgress(null);
     }
   }
+  const firstSuggestion = report?.reviews[0];
   const stats =
     report &&
     ([
@@ -320,13 +321,6 @@ export function App() {
         icon: Folder,
         screen: "folders",
         tint: "gold",
-      },
-      {
-        label: tr("待复核项目"),
-        value: count(report.review_count),
-        icon: ListChecks,
-        screen: "reviews",
-        tint: "violet",
       },
     ] as const);
   return (
@@ -436,7 +430,9 @@ export function App() {
                   <button
                     title={tr("重新扫描")}
                     aria-label={tr("重新扫描")}
-                    onClick={() => request(report.root, view === "reviews" ? "reviews" : "children")}
+                    onClick={() =>
+                      request(report.root, view === "reviews" ? "reviews" : "children")
+                    }
                   >
                     <RotateCw />
                   </button>
@@ -475,6 +471,30 @@ export function App() {
                   </button>
                 ))}
               </div>
+              {view === "children" && (
+                <section className="card scan-advice" aria-label={tr("清理建议")}>
+                  <div>
+                    <h2>
+                      <ListChecks />
+                      {tr("清理建议")}
+                    </h2>
+                    {firstSuggestion ? (
+                      <p>
+                        <strong>{basename(firstSuggestion.path)}</strong>
+                        {" · "}
+                        {label(firstSuggestion.advice.reason)}
+                      </p>
+                    ) : (
+                      <p>{emptyReviewReason(report)}</p>
+                    )}
+                  </div>
+                  {report.review_count > 0 && (
+                    <button className="primary" onClick={() => go("reviews")}>
+                      {tr("查看全部 {0} 条建议", count(report.review_count))}
+                    </button>
+                  )}
+                </section>
+              )}
               <Workspace
                 key={report.generation}
                 initialFocus={initialFocus}
