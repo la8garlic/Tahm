@@ -1,0 +1,22 @@
+name: 故障报告 / Bug report
+description: 使用自建文件描述问题。 Describe the problem with disposable sample files.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 塔姆和 Windows 版本 / Tahm and Windows versions
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      description: 请隐去真实路径、文件名和 API 密钥。 Redact personal paths, filenames and API keys.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期与实际结果 / Expected and observed behavior
+    validations:
+      required: true

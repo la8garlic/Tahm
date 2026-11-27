@@ -1,0 +1,15 @@
+/target/
+/gen/
+/Tahm.exe
+/node_modules/
+/dist/
+/release/
+/web/fonts/MiSansVF.woff2
+/.venv/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key

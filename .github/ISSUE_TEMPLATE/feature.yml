@@ -1,0 +1,9 @@
+name: 功能建议 / Feature request
+description: 描述扫描或清理时的具体需求。 Describe the disk analysis or cleanup task.
+body:
+  - type: textarea
+    id: use
+    attributes:
+      label: 使用场景与期望结果 / Use case and desired result
+    validations:
+      required: true

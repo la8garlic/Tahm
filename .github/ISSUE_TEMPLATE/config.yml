@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 私密报告安全问题 / Report a security issue privately
+    url: https://github.com/la8garlic/Tahm/security/advisories/new
+    about: 安全问题可能涉及用户数据，请私密报告。 Please report risks to user data privately.
