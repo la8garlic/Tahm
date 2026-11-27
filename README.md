@@ -8,14 +8,15 @@
 
 ## 下载与启动
 
-1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v0.8.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
-2. 在下载目录运行 `Get-FileHash .\Tahm-v0.8.0-windows-x64.zip -Algorithm SHA256`，与校验文件中的十六进制值逐字比较。
+1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v0.9.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
+2. 在下载目录运行 `Get-FileHash .\Tahm-v0.9.0-windows-x64.zip -Algorithm SHA256`，与校验文件中的十六进制值逐字比较。
 3. 解压整个 ZIP，双击 `Tahm.exe`。系统需要 Microsoft Edge WebView2 Runtime；缺少时可从 [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/) 安装。当前公开发行版没有 Authenticode 签名。
 4. 在标题栏选择 **English** 或 **中文**。应用会记住选择。也可运行 `.\Tahm.exe "D:\示例目录"` 直接扫描指定目录。
 
 ## 从面积图到清理清单
 
-- **开发版** · 在扫描中心使用 **一键扫描清理建议**。默认扫描下载目录，也可在“扫描范围”选择个人目录、磁盘或地址栏中的目录。扫描完成后按建议类别筛选，选中项目核对依据和预计释放量，再决定是否加入清单。
+- 普通扫描结束后，在面积图上方的 **清理建议** 查看原因，点击 **查看全部** 即可逐项阅读清理条件。[查看界面示例](docs/screenshots/cleanup-zh-CN.png)
+- 在扫描中心使用 **一键扫描清理建议**。默认扫描下载目录，也可在“扫描范围”选择个人目录、磁盘或地址栏中的目录。扫描完成后按建议类别筛选，选中项目核对依据和预计释放量，再决定是否加入清单。
 - 选择磁盘或文件夹开始扫描。面积图可在逻辑大小和磁盘占用之间切换，点击色块或明细行会定位另一侧对应的项目。右键色块可以打开所在目录。
 - Ctrl 点选、Shift 连选，切换目录后仍保留选区。合计会合并父子项目。属于同一文件的硬链接只计一次，选区外仍有链接时，该文件的数据不会计入预计释放量。
 - 在文件类型、大目录、旧目录、内容比对和扫描对比中进一步核对。加入清单后，确认才会复核并移入 Windows 回收站。发生变化或无权访问的项目会显示原因。

@@ -104,7 +104,7 @@ pub fn file(ext: &str, category: usize, guarded: bool, generated: bool) -> Advic
         ),
         "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" => Advice::review(
             "归档待核对",
-            "可能是分发包或唯一备份。核对归档内容以及另一份完整副本后，再决定是否移除。",
+            "归档包可能与已解压的文件重复。确认另有完整副本且无需保留原包后，可移除；若是唯一备份，请保留。",
         ),
         "crdownload" | "part" => Advice::review(
             "疑似下载分片",

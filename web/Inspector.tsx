@@ -238,6 +238,13 @@ export function Inspector({
         <h3 title={item.path}>{basename(item.path)}</h3>
       </div>
       <p className="path">{item.path}</p>
+      <div className="evidence">
+        <b>
+          <ShieldCheck />
+          {tr("判断依据")} · {label(item.advice.label)}
+        </b>
+        <p>{label(item.advice.reason)}</p>
+      </div>
       <dl>
         {[
           [tr("逻辑大小"), bytes(item.bytes)],
@@ -274,13 +281,6 @@ export function Inspector({
           {label(state) || tr("加入待清理")}
         </button>
       )}
-      <div className="evidence">
-        <b>
-          <ShieldCheck />
-          {label(item.advice.label)}
-        </b>
-        <p>{label(item.advice.reason)}</p>
-      </div>
       {item.directory && (
         <details className="samples">
           <summary>{tr("目录线索")}</summary>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Languages, Minus, Square, X } from "lucide-react";
 import { locale, setLanguage } from "./i18n";
+import { version } from "../package.json";
 
 export const windowTitle = () =>
   locale() === "en" ? "Tahm · Disk Space Analyzer" : "塔姆 · 磁盘空间分析";
@@ -32,15 +33,10 @@ export function TitleBar() {
   return (
     <header className="window-bar" aria-label={windowTitle()}>
       <div className="window-caption" data-tauri-drag-region="deep">
-        <img
-          src={new URL("./tahm.png", import.meta.url).href}
-          alt=""
-          draggable={false}
-          width={25}
-          height={25}
-        />
+        <img src="./tahm.svg" alt="" draggable={false} width={25} height={25} />
         <b>{brand}</b>
         <span>{description}</span>
+        <small className="app-version">v{version}</small>
       </div>
       <button
         className="language-switch"

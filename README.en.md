@@ -9,13 +9,14 @@ Tahm is a Windows x64 desktop application for understanding disk usage. Scan a d
 ## Install and run
 
 1. Download the portable ZIP and `SHA256SUMS.txt` from the same [release](https://github.com/la8garlic/Tahm/releases).
-2. For v0.8.0, run `Get-FileHash .\Tahm-v0.8.0-windows-x64.zip -Algorithm SHA256` and compare the hexadecimal digest with the checksum file.
+2. For v0.9.0, run `Get-FileHash .\Tahm-v0.9.0-windows-x64.zip -Algorithm SHA256` and compare the hexadecimal digest with the checksum file.
 3. Extract the ZIP and start `Tahm.exe`. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) if it is missing. The public executable has no Authenticode signature.
 4. Choose **English** or **中文** in the title bar. Tahm saves the preference. To open a specific folder, run `.\Tahm.exe "D:\Example folder"`.
 
 ## Explore and reclaim space
 
-- **Development build** · In Scan center, use **Scan for suggestions** to review Downloads or choose a home folder, drive or the path in the address bar. Filter the results by category, inspect the evidence and reclaim estimate, then add the items you want to the queue.
+- After a regular scan, look for **Cleanup suggestions** above the treemap. Choose **View all** to read why each item was flagged and what to check before removal. [See the suggestions screen](docs/screenshots/cleanup-en.png)
+- In Scan center, use **Scan for suggestions** to review Downloads or choose a home folder, drive or the path in the address bar. Filter the results by category, inspect the evidence and reclaim estimate, then add the items you want to the queue.
 - Switch the treemap between logical size and allocated space. Selecting a tile locates its row, and selecting a row locates its tile. Right-click a tile to open its folder.
 - Ctrl-click individual items or Shift-click a range. Selections carry across folders. Totals collapse nested items and count shared data once. If a hard link survives outside the selection, its data stays allocated.
 - Explore extensions, large or old folders, identical contents and changes since the previous scan. Review the cleanup queue and confirm before moving anything to the Windows Recycle Bin. Changed or inaccessible entries have individual outcomes.
