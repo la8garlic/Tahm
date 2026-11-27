@@ -11,10 +11,10 @@ use std::{
 };
 
 use crate::{
-    advice::{self, Markers, KINDS},
+    advice::{self, Markers, ReviewLevel, KINDS},
     allocation::{Disk, Measurement, Reader},
     catalog::{open_entry, Branch, Catalog, Member, Stamp},
-    report::{display, Extension, Item, Ranking, Report, Totals},
+    report::{display, Extension, Item, Ranking, Report, ReviewSummary, Totals},
 };
 
 const REPARSE: u32 = 0x400;
@@ -70,6 +70,7 @@ impl Frame {
     }
 
     fn absorb(&mut self, child: &Frame) {
+        self.markers.subdirectories = true;
         self.disk.add(child.disk);
         for (total, part) in self.types.iter_mut().zip(child.types) {
             *total += part;
@@ -125,11 +126,35 @@ struct Inventory {
     direct_file_bytes: u64,
     folders: Ranking,
     files: Ranking,
-    reviews: Ranking,
-    review_types: BTreeMap<&'static str, u64>,
+    rebuild: Candidates,
+    manual: Candidates,
+}
+
+// 每组单独保留最大的一百项，下载文件的数量与大小不会挤走有重建依据的目录。
+#[derive(Default)]
+struct Candidates {
+    largest: Ranking,
+    categories: BTreeMap<&'static str, u64>,
+}
+
+impl Candidates {
+    fn finish(self) -> ReviewSummary {
+        ReviewSummary {
+            count: self.categories.values().sum(),
+            categories: self.categories,
+            items: self.largest.finish(),
+        }
+    }
 }
 
 impl Inventory {
+    fn candidates(&mut self, level: ReviewLevel) -> &mut Candidates {
+        match level {
+            ReviewLevel::Rebuild => &mut self.rebuild,
+            ReviewLevel::Manual => &mut self.manual,
+        }
+    }
+
     fn error(&mut self, path: &Path, err: io::Error) {
         self.totals.errors += 1;
         if self.issues.len() < 20 {
@@ -170,6 +195,14 @@ impl Inventory {
         // 与主扫描共用一次元数据读取，零字节文件也计入扩展名数量。
         let advice = advice::file(&ext, category, frame.guarded, frame.generated);
         frame.markers.bytecode += u64::from(ext == "pyc");
+        if ext == "pyc"
+            && frame.name == "__pycache__"
+            && !frame.guarded
+            && !frame.within_generated
+            && !frame.markers.missing_source
+        {
+            frame.markers.missing_source = !advice::bytecode_has_source(&frame.path, &name);
+        }
         let stats = self.extensions.entry(ext).or_default();
         stats.0 += bytes;
         stats.1 += 1;
@@ -187,12 +220,13 @@ impl Inventory {
         });
         self.totals.files += 1;
         self.totals.bytes += bytes;
-        if advice.review {
-            *self.review_types.entry(advice.label).or_default() += 1;
-        }
+        let review = advice.review.filter(|&level| {
+            let group = self.candidates(level);
+            *group.categories.entry(advice.label).or_default() += 1;
+            group.largest.worth(bytes)
+        });
         let in_files = self.files.worth(bytes);
-        let in_reviews = advice.review && self.reviews.worth(bytes);
-        if in_files || in_reviews {
+        if in_files || review.is_some() {
             let item = Item {
                 disk,
                 bytes,
@@ -203,8 +237,8 @@ impl Inventory {
                 kind: KINDS[category],
                 advice,
             };
-            if in_reviews {
-                self.reviews.offer(item.clone());
+            if let Some(level) = review {
+                self.candidates(level).largest.offer(item.clone());
             }
             if in_files {
                 self.files.offer(item);
@@ -213,14 +247,15 @@ impl Inventory {
     }
 
     fn folder(&mut self, item: &Item, depth: usize) {
-        if depth > 0 && item.advice.review {
-            *self.review_types.entry(item.advice.label).or_default() += 1;
-            self.reviews.offer(item.clone());
-        }
         if depth == 1 {
             self.children.push(item.clone());
         }
         if depth > 0 {
+            if let Some(level) = item.advice.review {
+                let group = self.candidates(level);
+                *group.categories.entry(item.advice.label).or_default() += 1;
+                group.largest.offer(item.clone());
+            }
             self.folders.offer(item.clone());
         }
     }
@@ -356,9 +391,10 @@ pub fn run(
                         folders: inventory.folders.finish(),
                         children: inventory.children,
                         direct_file_bytes: inventory.direct_file_bytes,
-                        reviews: inventory.reviews.finish(),
-                        review_count: inventory.review_types.values().sum(),
-                        review_types: inventory.review_types,
+                        reviews: BTreeMap::from([
+                            (ReviewLevel::Rebuild, inventory.rebuild.finish()),
+                            (ReviewLevel::Manual, inventory.manual.finish()),
+                        ]),
                         issues: inventory.issues,
                     },
                     catalog,

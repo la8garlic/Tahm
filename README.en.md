@@ -15,7 +15,7 @@ Tahm is a Windows x64 desktop application for understanding disk usage. Scan a d
 
 ## Explore and reclaim space
 
-- After a regular scan, look for **Cleanup suggestions** above the treemap. Choose **View all** to read why each item was flagged and what to check before removal. [See the suggestions screen](docs/screenshots/cleanup-en.png)
+- After a scan, choose **View suggestions** above the treemap. **Rebuild evidence** lists folders with a matching lockfile, compiler marker or source file. **Manual review** covers archives, installers and items with missing rebuild evidence. To verify identical file contents, use the comparison action in file details. [See the suggestions screen](docs/screenshots/cleanup-en.png)
 - In Scan center, use **Scan for suggestions** to review Downloads or choose a home folder, drive or the path in the address bar. Filter the results by category, inspect the evidence and reclaim estimate, then add the items you want to the queue.
 - Switch the treemap between logical size and allocated space. Selecting a tile locates its row, and selecting a row locates its tile. Right-click a tile to open its folder.
 - Ctrl-click individual items or Shift-click a range. Selections carry across folders. Totals collapse nested items and count shared data once. If a hard link survives outside the selection, its data stays allocated.

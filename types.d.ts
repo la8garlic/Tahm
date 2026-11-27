@@ -1,7 +1,8 @@
+type ReviewLevel = "rebuild" | "manual";
 interface Advice {
   label: string;
   reason: string;
-  review: boolean;
+  review: ReviewLevel | null;
 }
 interface ScanItem {
   disk: { bytes: number; charged: number; unknown: number };
@@ -21,7 +22,7 @@ interface ReclaimEstimate {
   retained_files: number;
   unknown: number;
 }
-type ReviewFilter = { query: string; category: string | null; labels: string[] };
+type ReviewFilter = { level: ReviewLevel; query: string; category: string | null; labels: string[] };
 type SelectionOrder =
   | { kind: "reviews"; filter: ReviewFilter }
   | { kind: "directory"; path: string; query: string; metric: SpaceMetric }
@@ -51,9 +52,7 @@ interface ScanReport {
   children: ScanItem[];
   files: ScanItem[];
   folders: ScanItem[];
-  reviews: ScanItem[];
-  review_count: number;
-  review_types: Record<string, number>;
+  reviews: Record<ReviewLevel, { items: ScanItem[]; count: number; categories: Record<string, number> }>;
   issues: string[];
 }
 interface FolderPage {

@@ -31,7 +31,7 @@ import { Workspace, titles, type Screen } from "./Workspace";
 import { Queue } from "./Queue";
 import { contains, covering, rootsOf } from "./selection";
 import { clearHistory, readHistory, record, type Snapshot } from "./history";
-import { basename, bytes, count, Dialog, emptyReviewReason, parent, ScanBar } from "./shared";
+import { adviceLabel, basename, bytes, count, Dialog, emptyReviewReason, parent, ScanBar } from "./shared";
 import * as ipc from "./ipc.js";
 
 const navigation = [
@@ -297,7 +297,7 @@ export function App() {
       setRecycleProgress(null);
     }
   }
-  const firstSuggestion = report?.reviews[0];
+  const firstSuggestion = report?.reviews.rebuild.items[0] ?? report?.reviews.manual.items[0];
   const stats =
     report &&
     ([
@@ -480,7 +480,7 @@ export function App() {
                     </h2>
                     {firstSuggestion ? (
                       <p>
-                        <strong>{basename(firstSuggestion.path)}</strong>
+                        <strong>{adviceLabel(firstSuggestion.advice)} · {basename(firstSuggestion.path)}</strong>
                         {" · "}
                         {label(firstSuggestion.advice.reason)}
                       </p>
@@ -488,9 +488,9 @@ export function App() {
                       <p>{emptyReviewReason(report)}</p>
                     )}
                   </div>
-                  {report.review_count > 0 && (
+                  {firstSuggestion && (
                     <button className="primary" onClick={() => go("reviews")}>
-                      {tr("查看全部 {0} 条建议", count(report.review_count))}
+                      {tr("查看清理建议")}
                     </button>
                   )}
                 </section>

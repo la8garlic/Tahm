@@ -4,7 +4,8 @@ use std::{cmp::Reverse, collections::BinaryHeap, path::Path};
 
 use serde::Serialize;
 
-use crate::advice::Advice;
+use crate::advice::{Advice, ReviewLevel};
+use std::collections::BTreeMap;
 
 pub const LIMIT: usize = 100;
 
@@ -64,6 +65,13 @@ pub struct Extension {
 }
 
 #[derive(Serialize)]
+pub struct ReviewSummary {
+    pub count: u64,
+    pub categories: BTreeMap<&'static str, u64>,
+    pub items: Vec<Item>,
+}
+
+#[derive(Serialize)]
 pub struct Report {
     pub generation: u64,
     pub root: String,
@@ -76,9 +84,7 @@ pub struct Report {
     pub direct_file_bytes: u64,
     pub folders: Vec<Item>,
     pub files: Vec<Item>,
-    pub reviews: Vec<Item>,
-    pub review_count: u64,
-    pub review_types: std::collections::BTreeMap<&'static str, u64>,
+    pub reviews: BTreeMap<ReviewLevel, ReviewSummary>,
     pub issues: Vec<String>,
 }
 

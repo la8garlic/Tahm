@@ -1,7 +1,7 @@
 import { label, tr, locale, nativeMessage } from "./i18n";
 import { Folder, File, Trash2, X, RotateCw, ListChecks } from "lucide-react";
 import { useState } from "react";
-import { ActivityBar, basename, bytes, count, Dialog, ScanBar } from "./shared";
+import { ActivityBar, adviceLabel, basename, bytes, count, Dialog, ScanBar } from "./shared";
 import * as ipc from "./ipc.js";
 
 import { useEstimate } from "./selection";
@@ -178,7 +178,7 @@ export function Queue({
             <div>
               <b>{basename(i.path)}</b>
               <small>{i.path}</small>
-              <p className="queue-advice">{label(i.advice.label)} · {label(i.advice.reason)}</p>
+              <p className="queue-advice">{adviceLabel(i.advice)} · {label(i.advice.reason)}</p>
             </div>
             <span>{bytes(i.bytes)}</span>
             <button

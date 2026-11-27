@@ -1,6 +1,6 @@
 //! 只用文件系统证据解释用途，删除条件始终由使用者核实。
 
-use std::path::Path;
+use std::{os::windows::fs::MetadataExt, path::Path};
 
 use serde::Serialize;
 
@@ -36,7 +36,14 @@ pub fn kind(ext: &str) -> usize {
 pub struct Advice {
     pub label: &'static str,
     pub reason: &'static str,
-    pub review: bool,
+    pub review: Option<ReviewLevel>,
+}
+
+#[derive(Clone, Copy, Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
+pub enum ReviewLevel {
+    Rebuild,
+    Manual,
 }
 
 impl Advice {
@@ -44,15 +51,15 @@ impl Advice {
         Self {
             label,
             reason,
-            review: false,
+            review: None,
         }
     }
 
-    fn review(label: &'static str, reason: &'static str) -> Self {
+    fn review(level: ReviewLevel, label: &'static str, reason: &'static str) -> Self {
         Self {
             label,
             reason,
-            review: true,
+            review: Some(level),
         }
     }
 }
@@ -95,18 +102,22 @@ pub fn file(ext: &str, category: usize, guarded: bool, generated: bool) -> Advic
             "可能是模型权重或推理模型，请核对使用它的工作流，以及能否重新取得同一版本。",
         ),
         "msi" | "msix" => Advice::review(
+            ReviewLevel::Manual,
             "安装包",
             "扩展名表明这是安装包。确认软件已安装、无需离线修复且可重新取得后，可考虑移除。",
         ),
         "iso" => Advice::review(
+            ReviewLevel::Manual,
             "光盘镜像",
             "可能用于安装或归档。先确认未挂载、无需离线使用，并且有其他来源。",
         ),
         "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" => Advice::review(
+            ReviewLevel::Manual,
             "归档待核对",
-            "归档包可能与已解压的文件重复。确认另有完整副本且无需保留原包后，可移除；若是唯一备份，请保留。",
+            "后缀表明这是归档包。扫描未比对归档内容；仅在确认另有完整副本且无需原包时考虑移除，唯一备份请保留。",
         ),
         "crdownload" | "part" => Advice::review(
+            ReviewLevel::Manual,
             "疑似下载分片",
             "该后缀常用于未完成的下载。先在下载工具内核对任务状态，仅清理已放弃的任务。",
         ),
@@ -140,6 +151,37 @@ pub struct Markers {
     python: bool,
     rust_output: bool,
     pub bytecode: u64,
+    pub missing_source: bool,
+    pub subdirectories: bool,
+}
+
+// 证据文件必须实际位于该路径；链接、无法读取的条目都不能佐证可重建性。
+fn regular(path: &Path) -> bool {
+    path.symlink_metadata()
+        .is_ok_and(|m| m.is_file() && m.file_attributes() & 0x400 == 0)
+}
+
+/// PEP 3147/488：module.tag[.opt-N].pyc 对应上一级的 module.py。
+pub fn bytecode_has_source(cache: &Path, filename: &str) -> bool {
+    let Some((stem, _extension)) = filename.rsplit_once('.') else {
+        return false;
+    };
+    let Some((prefix, suffix)) = stem.rsplit_once('.') else {
+        return false;
+    };
+    let (module, tag) = if suffix.starts_with("opt-") {
+        let Some(parts) = prefix.rsplit_once('.') else {
+            return false;
+        };
+        parts
+    } else {
+        (prefix, suffix)
+    };
+    !module.is_empty()
+        && (tag.starts_with("cpython-") || tag.starts_with("pypy"))
+        && cache
+            .parent()
+            .is_some_and(|p| regular(&p.join(format!("{module}.py"))))
 }
 
 impl Markers {
@@ -172,19 +214,33 @@ pub fn folder(
             "此目录包含跳过或无法读取的项目，当前大小为已统计部分，请先检查原目录。",
         );
     }
-    if let Some(parent) = path.parent() {
-        match name {
-            "node_modules" if parent.join("package.json").is_file() => return Advice::review("项目依赖", "同级有 package.json。确认依赖源可用、手工修改已保存，再用包管理器重装。"),
-            "target" if markers.rust_output && parent.join("Cargo.toml").is_file() => return Advice::review("Rust 构建产物", "发现 Cargo 清单和编译器标记。确认无需保留打包结果后，可在所属项目运行 cargo clean。"),
-            "__pycache__" if count > 0 && count == markers.bytecode => return Advice::review("Python 字节码", "目录内仅统计到 .pyc 文件。确认对应源码仍在，停止程序后可移除并在下次运行时重建。"),
-            _ => {}
-        }
-    }
     if markers.cargo || markers.manifest || markers.python {
         return Advice::keep(
             "开发项目",
             "目录中有项目清单，通常包含源码和配置。请保留项目本身，单独复核生成目录。",
         );
+    }
+    if let Some(parent) = path.parent() {
+        match name {
+            "node_modules" if count > 0 && regular(&parent.join("package.json")) => {
+                let locked = ["package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"]
+                    .iter().any(|file| regular(&parent.join(file)));
+                return if locked {
+                    Advice::review(ReviewLevel::Rebuild, "项目依赖", "同级有 package.json 和依赖锁文件。确认依赖源仍可用、手工修改已保存，再按锁定版本重装。")
+                } else {
+                    Advice::review(ReviewLevel::Manual, "项目依赖", "同级有 package.json，但未在此处找到依赖锁文件。请核对工作区的锁文件、依赖来源和手工修改。")
+                };
+            }
+            "target" if markers.rust_output && regular(&parent.join("Cargo.toml")) => return Advice::review(ReviewLevel::Rebuild, "Rust 构建产物", "发现 Cargo 清单和编译器标记。确认无需保留打包结果后，可在所属项目运行 cargo clean。"),
+            "__pycache__" if count > 0 && count == markers.bytecode && !markers.subdirectories => {
+                return if markers.missing_source {
+                    Advice::review(ReviewLevel::Manual, "Python 字节码", "仅发现 .pyc 文件，但至少一项未找到对应的本地源码。可能是仅有的可运行副本，请先保留。")
+                } else {
+                    Advice::review(ReviewLevel::Rebuild, "Python 字节码", "目录内仅有 .pyc 文件，上一级能找到每一项对应的 .py 源码。关闭使用它的程序后，下次导入时可重建。")
+                };
+            }
+            _ => {}
+        }
     }
     match majority {
         Some(0) => Advice::keep(

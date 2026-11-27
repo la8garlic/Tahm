@@ -82,7 +82,7 @@ pub struct Member {
     pub name: OsString,
     pub stamp: Stamp,
     pub bytes: u64,
-    pub review: bool,
+    pub review: Option<advice::ReviewLevel>,
 }
 impl Member {
     fn named(&self, query: &str) -> bool {
@@ -188,6 +188,7 @@ pub struct FileCursor {
 
 #[derive(serde::Deserialize)]
 pub struct ReviewFilter {
+    level: advice::ReviewLevel,
     query: String,
     category: Option<String>,
     // 前端把当前语言中匹配搜索词的分类还原为规则标识。
@@ -221,7 +222,7 @@ impl Catalog {
                 branch
                     .members
                     .iter()
-                    .filter(|m| m.review)
+                    .filter(|m| m.review == Some(filter.level))
                     .map(move |m| self.item(dir, m, branch))
             })
             .filter(move |item| {
