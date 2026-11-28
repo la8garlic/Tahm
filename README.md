@@ -8,7 +8,7 @@
 
 ## 下载与启动
 
-1. 从 [Releases](https://github.com/la8garlic/Tahm/releases) 下载同一版本的 `Tahm-v1.0.0-windows-x64.zip` 和 `SHA256SUMS.txt`。
+1. 下载 v1.0.0 的 [Windows x64 便携包](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/Tahm-v1.0.0-windows-x64.zip) 和 [SHA256SUMS.txt 校验文件](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/SHA256SUMS.txt)。
 2. 在下载目录运行 `Get-FileHash .\Tahm-v1.0.0-windows-x64.zip -Algorithm SHA256`，与校验文件中的十六进制值逐字比较。
 3. 解压整个 ZIP，双击 `Tahm.exe`。系统需要 Microsoft Edge WebView2 Runtime；缺少时可从 [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/) 安装。当前公开发行版没有 Authenticode 签名。
 4. 在标题栏选择 **English** 或 **中文**。应用会记住选择。也可运行 `.\Tahm.exe "D:\示例目录"` 直接扫描指定目录。

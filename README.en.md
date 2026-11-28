@@ -8,7 +8,7 @@ Tahm is a Windows x64 desktop application for understanding disk usage. Scan a d
 
 ## Install and run
 
-1. Download the portable ZIP and `SHA256SUMS.txt` from the same [release](https://github.com/la8garlic/Tahm/releases).
+1. Download the v1.0.0 [Windows x64 portable ZIP](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/Tahm-v1.0.0-windows-x64.zip) and its [SHA256SUMS.txt checksum file](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/SHA256SUMS.txt).
 2. For v1.0.0, run `Get-FileHash .\Tahm-v1.0.0-windows-x64.zip -Algorithm SHA256` and compare the hexadecimal digest with the checksum file.
 3. Extract the ZIP and start `Tahm.exe`. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) if it is missing. The public executable has no Authenticode signature.
 4. Choose **English** or **中文** in the title bar. Tahm saves the preference. To open a specific folder, run `.\Tahm.exe "D:\Example folder"`.
