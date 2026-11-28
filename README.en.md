@@ -1,6 +1,6 @@
 # Tahm · Disk Space Analyzer
 
-[简体中文](README.md) · [Download](https://github.com/la8garlic/Tahm/releases/latest) · [v1.0.0 release notes](docs/releases/v1.0.0.en.md) · [Report a vulnerability](SECURITY.en.md)
+[简体中文](README.md) · [Download](https://github.com/la8garlic/Tahm/releases/latest) · [v1.0.1 release notes](docs/releases/v1.0.1.en.md) · [Report a vulnerability](SECURITY.en.md)
 
 Tahm is a Windows x64 desktop application for understanding disk usage. Scan a drive or folder, inspect forgotten directories and estimate how much space a selection could free before sending it to the Recycle Bin. The core analysis runs locally and works offline.
 
@@ -8,8 +8,8 @@ Tahm is a Windows x64 desktop application for understanding disk usage. Scan a d
 
 ## Install and run
 
-1. Download the v1.0.0 [Windows x64 portable ZIP](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/Tahm-v1.0.0-windows-x64.zip) and its [SHA256SUMS.txt checksum file](https://github.com/la8garlic/Tahm/releases/download/v1.0.0/SHA256SUMS.txt).
-2. For v1.0.0, run `Get-FileHash .\Tahm-v1.0.0-windows-x64.zip -Algorithm SHA256` and compare the hexadecimal digest with the checksum file.
+1. Download the v1.0.1 [Windows x64 portable ZIP](https://github.com/la8garlic/Tahm/releases/download/v1.0.1/Tahm-v1.0.1-windows-x64.zip) and its [SHA256SUMS.txt checksum file](https://github.com/la8garlic/Tahm/releases/download/v1.0.1/SHA256SUMS.txt).
+2. For v1.0.1, run `Get-FileHash .\Tahm-v1.0.1-windows-x64.zip -Algorithm SHA256` and compare the hexadecimal digest with the checksum file.
 3. Extract the ZIP and start `Tahm.exe`. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) if it is missing. The public executable has no Authenticode signature.
 4. Choose **English** or **中文** in the title bar. Tahm saves the preference. To open a specific folder, run `.\Tahm.exe "D:\Example folder"`.
 
